@@ -71,7 +71,7 @@ pub fn parse_polynomial_expr(input: &str) -> Polynomial {
                 "parse_polynomial_expr: exponents currently must be non-negative"
             );
 
-            return Some(exponent);
+            return Some(exponent as i32);
         }
 
         None

@@ -25,7 +25,7 @@ impl Polynomial {
         *self.coeffs.get(&degree).unwrap_or(&Rational::from(0))
     }
 
-    /// Evaluate the polynomial at a given value `x`.
+    /// Evaluate the polynomial at a given value `x` using rational arithmetic.
     pub fn eval(&self, x: Rational) -> Rational {
         let mut result = Rational::from(0);
 

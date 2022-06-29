@@ -1,6 +1,7 @@
 mod parser;
 mod polynomial;
 mod rational;
+mod solver;
 
 use parser::parse_polynomial_expr;
 use polynomial::Polynomial;
@@ -69,6 +70,7 @@ fn solve_univariate_polynomial(poly: &Polynomial) -> Vec<Rational> {
         _ => todo!("{}th degree polynomials", degree),
     }
 }
+use solver::solve_univariate_polynomial;
 
 fn print_solutions(input: &str) {
     println!("{}", input);
@@ -88,19 +90,19 @@ fn print_solutions(input: &str) {
 }
 
 fn main() {
-    print_solutions("5x = 0");
+    // print_solutions("5x = 0");
 
-    print_solutions("5x + 3 = 0");
+    // print_solutions("5x + 3 = 0");
 
-    print_solutions("x^2 + 5x + 6 = 0");
+    // print_solutions("x^2 + 5x + 6 = 0");
 
-    print_solutions("x^2 + 5 = 0");
+    // print_solutions("x^2 + 5 = 0");
 
-    print_solutions("x^2 - 3x - 5x = 0");
+    // print_solutions("x^2 - 3x - 5x = 0");
 
     // print_solutions("x^2 - 3x - 5x = x^2 + 2x + 3");
 
-    print_solutions("x^3 - 3x^2 + 3x - 1 = 0");
-
-    print_solutions("x^3 + 5x^2 - 25x - 125 = 0");
+    print_solutions("x^3 + 5x^2 - 25x - 125 = 0"); // (x + 5)^2 * (x - 5)
+    print_solutions("-27 + 27 x - 9 x^2 + x^3 = 0"); // (x - 3)^3
+    print_solutions("x^4 - 16 x^3 + 96 x^2 - 256 x + 256"); // (x - 4)^4
 }
