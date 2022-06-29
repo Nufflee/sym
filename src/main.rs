@@ -1,32 +1,19 @@
 mod parser;
+mod polynomial;
 mod rational;
 
 use parser::parse_polynomial_expr;
+use polynomial::Polynomial;
 use rational::Rational;
 use std::{cmp::Ordering, collections::HashMap};
 
-fn solve_univariate_polynomial(coeffs: &HashMap<u32, Rational>) -> Vec<Rational> {
-    // TODO: Create a Polynomial struct that abstracts all of this away
-    let degree = *coeffs
-        .keys()
-        .filter(|&&exponent| exponent != 0)
-        .max()
-        .expect(
-            "solve_univariate_polynomial: don't know how to deal with zeroth degree polynomials",
-        );
-
-    let mut coeffs = coeffs.clone();
-
-    for i in 0..degree {
-        coeffs.entry(i).or_insert_with(|| Rational::from(0));
-    }
-
-    match degree {
-        1 => vec![-coeffs[&0] / coeffs[&1]],
+fn solve_univariate_polynomial(poly: &Polynomial) -> Vec<Rational> {
+    match poly.degree() {
+        1 => vec![-poly.get(0) / poly.get(1)],
         2 => {
-            let a = coeffs[&2];
-            let b = coeffs[&1];
-            let c = coeffs[&0];
+            let a = poly.get(2);
+            let b = poly.get(1);
+            let c = poly.get(0);
 
             let discriminant = b * b - Rational::from(4) * a * c;
 
@@ -86,7 +73,9 @@ fn solve_univariate_polynomial(coeffs: &HashMap<u32, Rational>) -> Vec<Rational>
 fn print_solutions(input: &str) {
     println!("{}", input);
 
-    let solns = solve_univariate_polynomial(&parse_polynomial_expr(input));
+    let poly = parse_polynomial_expr(input);
+
+    let solns = solve_univariate_polynomial(&poly);
     println!(
         "=> x = {{{}}}",
         solns

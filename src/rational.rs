@@ -133,6 +133,13 @@ impl Rational {
         }
     }
 
+    pub fn abs(&self) -> Self {
+        Rational {
+            numer: self.numer.abs(),
+            denom: self.denom,
+        }
+    }
+
     pub fn as_integer(&self) -> Option<i32> {
         if self.denom == 1 {
             Some(self.numer)
@@ -145,6 +152,15 @@ impl Rational {
 impl From<i32> for Rational {
     fn from(x: i32) -> Self {
         Rational { numer: x, denom: 1 }
+    }
+}
+
+impl From<u32> for Rational {
+    fn from(x: u32) -> Self {
+        Rational {
+            numer: x as i32,
+            denom: 1,
+        }
     }
 }
 

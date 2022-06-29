@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::rational::Rational;
+use crate::{polynomial::Polynomial, rational::Rational};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 enum Token {
@@ -42,7 +42,7 @@ fn tokenize(input: &str) -> Vec<Token> {
     tokens
 }
 
-pub fn parse_polynomial_expr(input: &str) -> HashMap<u32, Rational> {
+pub fn parse_polynomial_expr(input: &str) -> Polynomial {
     let tokens = tokenize(input);
     let mut i = 0;
 
@@ -131,5 +131,5 @@ pub fn parse_polynomial_expr(input: &str) -> HashMap<u32, Rational> {
         i += 1;
     }
 
-    coeffs
+    Polynomial::new(coeffs)
 }
