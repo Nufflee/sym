@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Div, Mul, Neg, Sub},
 };
 
-fn integer_sqrt(value: i32) -> Option<i32> {
+fn integer_sqrt(value: i64) -> Option<i64> {
     if value < 0 {
         todo!("integer_sqrt: negative roots");
     }
@@ -31,7 +31,7 @@ fn integer_sqrt(value: i32) -> Option<i32> {
     }
 }
 
-fn integer_cbrt(value: i32) -> Option<i32> {
+fn integer_cbrt(value: i64) -> Option<i64> {
     // Cube root is an odd function meaning that cbrt(-a) = -cbrt(a). So, in order to compute cbrt(-a) we compute cbrt(a) and tack a minus on at the end.
     let value_abs = value.abs();
 
@@ -57,7 +57,7 @@ fn integer_cbrt(value: i32) -> Option<i32> {
     }
 }
 
-fn greatest_common_divisor(mut a: i32, mut b: i32) -> i32 {
+fn greatest_common_divisor(mut a: i64, mut b: i64) -> i64 {
     // Use Euclidean algorithm to find the GCD (https://en.wikipedia.org/wiki/Greatest_common_divisor#Euclidean_algorithm)
     while b != 0 {
         let t = b;
@@ -70,12 +70,12 @@ fn greatest_common_divisor(mut a: i32, mut b: i32) -> i32 {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rational {
-    numer: i32,
-    denom: i32,
+    numer: i64,
+    denom: i64,
 }
 
 impl Rational {
-    pub fn new(mut numer: i32, mut denom: i32) -> Rational {
+    pub fn new(mut numer: i64, mut denom: i64) -> Rational {
         let gcd = greatest_common_divisor(numer, denom).abs();
 
         if denom == 0 {
@@ -140,7 +140,7 @@ impl Rational {
         }
     }
 
-    pub fn as_integer(&self) -> Option<i32> {
+    pub fn as_integer(&self) -> Option<i64> {
         if self.denom == 1 {
             Some(self.numer)
         } else {
@@ -151,14 +151,17 @@ impl Rational {
 
 impl From<i32> for Rational {
     fn from(x: i32) -> Self {
-        Rational { numer: x, denom: 1 }
+        Rational {
+            numer: x as i64,
+            denom: 1,
+        }
     }
 }
 
 impl From<u32> for Rational {
     fn from(x: u32) -> Self {
         Rational {
-            numer: x as i32,
+            numer: x as i64,
             denom: 1,
         }
     }
