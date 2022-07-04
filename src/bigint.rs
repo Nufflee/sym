@@ -232,19 +232,7 @@ mod tests {
 
     #[test]
     fn addition_simple() {
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![1]
-            } + BigInt {
-                sign: Sign::Positive,
-                digits: vec![2]
-            },
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![3]
-            }
-        );
+        assert_eq!(BigInt::from(1) + BigInt::from(2), BigInt::from(3));
     }
 
     #[test]
@@ -309,131 +297,32 @@ mod tests {
     #[test]
     fn addition_not_simple() {
         // (+) + (-) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![5]
-            } + BigInt {
-                sign: Sign::Negative,
-                digits: vec![9]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![4]
-            }
-        );
+        assert_eq!(BigInt::from(5) + BigInt::from(-9), BigInt::from(-4));
 
         // (+) + (-) = (+)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![69]
-            } + BigInt {
-                sign: Sign::Negative,
-                digits: vec![9]
-            },
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![60]
-            }
-        );
+        assert_eq!(BigInt::from(69) + BigInt::from(-9), BigInt::from(60));
 
         // (-) + (+) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![10]
-            } + BigInt {
-                sign: Sign::Positive,
-                digits: vec![9]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![1]
-            }
-        );
+        assert_eq!(BigInt::from(-10) + BigInt::from(9), BigInt::from(-1));
 
         // (-) + (+) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![9]
-            } + BigInt {
-                sign: Sign::Positive,
-                digits: vec![10]
-            },
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![1]
-            }
-        );
+        assert_eq!(BigInt::from(-9) + BigInt::from(10), BigInt::from(1));
 
         // (-) + (-) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![10]
-            } + BigInt {
-                sign: Sign::Negative,
-                digits: vec![9]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![19]
-            }
-        );
+        assert_eq!(BigInt::from(-10) + BigInt::from(-9), BigInt::from(-19));
     }
 
     #[test]
     fn subtraction_simple() {
         // (+) - (+) = (+)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![5]
-            } - BigInt {
-                sign: Sign::Positive,
-                digits: vec![2]
-            },
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![3]
-            }
-        );
+        assert_eq!(BigInt::from(5) - BigInt::from(2), BigInt::from(3));
 
         // (+) - (+) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![1]
-            } - BigInt {
-                sign: Sign::Positive,
-                digits: vec![69]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![68]
-            }
-        );
+        assert_eq!(BigInt::from(1) - BigInt::from(69), BigInt::from(-68));
     }
 
     #[test]
     fn subtraction_overflowing() {
-        // (+) - (+) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![0]
-            } - BigInt {
-                sign: Sign::Positive,
-                digits: vec![u64::MAX]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![u64::MAX]
-            }
-        );
-
         // (+) - (+) = (-)
         assert_eq!(
             BigInt {
@@ -453,64 +342,16 @@ mod tests {
     #[test]
     fn subtraction_not_simple() {
         // (+) - (-) = (+)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![5]
-            } - BigInt {
-                sign: Sign::Negative,
-                digits: vec![69]
-            },
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![74]
-            }
-        );
+        assert_eq!(BigInt::from(5) - BigInt::from(-69), BigInt::from(74));
 
         // (-) - (+) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![69]
-            } - BigInt {
-                sign: Sign::Positive,
-                digits: vec![5]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![74]
-            }
-        );
+        assert_eq!(BigInt::from(-69) - BigInt::from(5), BigInt::from(-74));
 
         // (-) - (-) = (-)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![69]
-            } - BigInt {
-                sign: Sign::Negative,
-                digits: vec![5]
-            },
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![64]
-            }
-        );
+        assert_eq!(BigInt::from(-69) - BigInt::from(-5), BigInt::from(-64));
 
         // (-) - (-) = (+)
-        assert_eq!(
-            BigInt {
-                sign: Sign::Negative,
-                digits: vec![5]
-            } - BigInt {
-                sign: Sign::Negative,
-                digits: vec![69]
-            },
-            BigInt {
-                sign: Sign::Positive,
-                digits: vec![64]
-            }
-        );
+        assert_eq!(BigInt::from(-5) - BigInt::from(-69), BigInt::from(64));
     }
 
     #[test]
