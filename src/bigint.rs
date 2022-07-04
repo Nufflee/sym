@@ -10,44 +10,85 @@ enum Sign {
     Negative,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone)]
 struct BigInt {
     sign: Sign,
     digits: Vec<u64>,
 }
 
-impl BigInt {}
+impl BigInt {
+    fn add_positive(&self, other: &BigInt) -> BigInt {
+        assert_eq!(self.sign, Sign::Positive);
+        assert_eq!(other.sign, Sign::Positive);
+
+        let mut result_digits = Vec::new();
+        let mut carry = false;
+
+        for (&a, &b) in self.digits.iter().zip(other.digits.iter()) {
+            let (result, carry1) = a.overflowing_add(b);
+            let (result, carry2) = result.overflowing_add(if carry { 1 } else { 0 });
+
+            carry = carry1 || carry2;
+
+            result_digits.push(result);
+        }
+
+        if carry {
+            result_digits.push(1);
+        }
+
+        BigInt {
+            sign: Sign::Positive,
+            digits: result_digits,
+        }
+    }
+
+    fn sub_positive(&self, other: &BigInt) -> BigInt {
+        assert_eq!(self.sign, Sign::Positive);
+        assert_eq!(other.sign, Sign::Positive);
+
+        let mut result_digits = Vec::new();
+        let mut borrow = false;
+
+        // Make sure we are subtracting the smaller number from the bigger one.
+        let sign = if self >= other {
+            Sign::Positive
+        } else {
+            Sign::Negative
+        };
+        let (left, right) = if sign == Sign::Positive {
+            (self, other)
+        } else {
+            (other, self)
+        };
+
+        for i in 0..left.digits.len() {
+            let (result, borrow1) =
+                left.digits[i].overflowing_sub(*right.digits.get(i).unwrap_or(&0));
+            let (result, borrow2) = result.overflowing_sub(if borrow { 1 } else { 0 });
+
+            borrow = borrow1 || borrow2;
+
+            result_digits.push(result);
+        }
+
+        BigInt {
+            sign,
+            digits: result_digits,
+        }
+    }
+}
 
 impl Add for BigInt {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
+        // The idea is to take make all operands positive using the negation operator (not an `abs` function to avoid branching) and then either add or subtract their absolute values.
         match (self.sign, other.sign) {
-            (Sign::Positive, Sign::Positive) => {
-                let mut result_digits = Vec::new();
-                let mut carry = false;
-
-                for i in 0..self.digits.len() {
-                    let (result, carry1) = self.digits[i].overflowing_add(other.digits[i]);
-                    let (result, carry2) = result.overflowing_add(if carry { 1 } else { 0 });
-
-                    carry = carry1 || carry2;
-
-                    result_digits.push(result);
-                }
-
-                if carry {
-                    result_digits.push(1);
-                }
-
-                BigInt {
-                    sign: self.sign,
-                    digits: result_digits,
-                }
-            }
-            (Sign::Positive, Sign::Negative) => self - -other,
-            (Sign::Negative, Sign::Positive) => other - -self,
-            (Sign::Negative, Sign::Negative) => -(-self + -other),
+            (Sign::Positive, Sign::Positive) => self.add_positive(&other),
+            (Sign::Positive, Sign::Negative) => self.sub_positive(&(-other)),
+            (Sign::Negative, Sign::Positive) => other.sub_positive(&(-self)),
+            (Sign::Negative, Sign::Negative) => -((-self).add_positive(&(-other))),
         }
     }
 }
@@ -56,38 +97,12 @@ impl Sub for BigInt {
     type Output = BigInt;
 
     fn sub(self, other: Self) -> Self::Output {
+        // The idea is to take make all operands positive using the negation operator (not an `abs` function to avoid branching) and then either subtract or add their absolute values.
         match (self.sign, other.sign) {
-            (Sign::Positive, Sign::Positive) => {
-                let mut result_digits = Vec::new();
-                let mut borrow = false;
-
-                let left = if self > other { &self } else { &other };
-                let right = if self > other { &other } else { &self };
-
-                for i in 0..left.digits.len() {
-                    let (result, borrow1) =
-                        left.digits[i].overflowing_sub(*right.digits.get(i).unwrap_or(&0));
-                    let (result, borrow2) = result.overflowing_sub(if borrow { 1 } else { 0 });
-
-                    borrow = borrow1 || borrow2;
-
-                    result_digits.push(result);
-                }
-
-                let sign = if self < other {
-                    Sign::Negative
-                } else {
-                    Sign::Positive
-                };
-
-                BigInt {
-                    sign,
-                    digits: result_digits,
-                }
-            }
-            (Sign::Positive, Sign::Negative) => self + -other, // `other` is negated in order to make it positive
-            (Sign::Negative, Sign::Positive) => -(-self + other), // `self` is negated in order to make it positive
-            (Sign::Negative, Sign::Negative) => -(-self - -other),
+            (Sign::Positive, Sign::Positive) => self.sub_positive(&other),
+            (Sign::Positive, Sign::Negative) => self.add_positive(&(-other)),
+            (Sign::Negative, Sign::Positive) => -((-self).add_positive(&other)),
+            (Sign::Negative, Sign::Negative) => -((-self).sub_positive(&(-other))),
         }
     }
 }
@@ -109,29 +124,58 @@ impl Neg for BigInt {
     }
 }
 
+impl PartialEq for BigInt {
+    fn eq(&self, other: &Self) -> bool {
+        // Make sure +0 and -0 are equal
+        if self.digits.len() == 1
+            && other.digits.len() == 1
+            && self.digits[0] == 0
+            && other.digits[0] == 0
+        {
+            return true;
+        }
+
+        if self.sign != other.sign {
+            return false;
+        }
+
+        if self.digits.len() == other.digits.len() {
+            for (&a, &b) in self.digits.iter().zip(other.digits.iter()) {
+                if a != b {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        false
+    }
+}
+
+impl Eq for BigInt {}
+
 impl Ord for BigInt {
     fn cmp(&self, other: &Self) -> Ordering {
+        if self.eq(other) {
+            return Ordering::Equal;
+        }
+
         if self.sign == other.sign {
-            if self.digits.len() == other.digits.len() {
-                if self.sign == Sign::Positive {
-                    self.digits
-                        .last()
-                        .unwrap()
-                        .cmp(other.digits.last().unwrap())
-                } else {
-                    match self
-                        .digits
-                        .last()
-                        .unwrap()
-                        .cmp(other.digits.last().unwrap())
-                    {
-                        Ordering::Less => Ordering::Greater,
-                        Ordering::Equal => Ordering::Equal,
-                        Ordering::Greater => Ordering::Less,
-                    }
-                }
+            let ord = if self.digits.len() == other.digits.len() {
+                // Compare last digits to determine which one is greater, if any.
+                self.digits
+                    .last()
+                    .unwrap()
+                    .cmp(other.digits.last().unwrap())
             } else {
                 self.digits.len().cmp(&other.digits.len())
+            };
+
+            if self.sign == Sign::Positive {
+                ord
+            } else {
+                ord.reverse()
             }
         } else {
             match (self.sign, other.sign) {
@@ -146,6 +190,19 @@ impl Ord for BigInt {
 impl PartialOrd for BigInt {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl From<i64> for BigInt {
+    fn from(n: i64) -> Self {
+        BigInt {
+            sign: if n >= 0 {
+                Sign::Positive
+            } else {
+                Sign::Negative
+            },
+            digits: vec![n.unsigned_abs()],
+        }
     }
 }
 
@@ -452,6 +509,23 @@ mod tests {
             BigInt {
                 sign: Sign::Positive,
                 digits: vec![64]
+            }
+        );
+    }
+
+    #[test]
+    fn ordering() {
+        assert!(BigInt::from(1) < BigInt::from(2));
+        assert!(BigInt::from(1) > BigInt::from(-2));
+        assert!(BigInt::from(-10) < BigInt::from(-2));
+
+        assert!(
+            BigInt {
+                sign: Sign::Negative,
+                digits: vec![0]
+            } == BigInt {
+                sign: Sign::Positive,
+                digits: vec![0]
             }
         );
     }
