@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     fmt::{Display, Formatter, Result},
-    ops::{Add, Div, Neg, Sub},
+    ops::{Add, AddAssign, Div, Mul, Neg, Shl, Sub},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,6 +17,13 @@ struct BigInt {
 }
 
 impl BigInt {
+    fn new() -> Self {
+        Self {
+            sign: Sign::Positive,
+            digits: vec![0],
+        }
+    }
+
     fn add_positive(&self, other: &BigInt) -> BigInt {
         assert_eq!(self.sign, Sign::Positive);
         assert_eq!(other.sign, Sign::Positive);
@@ -24,8 +31,15 @@ impl BigInt {
         let mut result_digits = Vec::new();
         let mut carry = false;
 
-        for (&a, &b) in self.digits.iter().zip(other.digits.iter()) {
-            let (result, carry1) = a.overflowing_add(b);
+        let (left, right) = if self > other {
+            (self, other)
+        } else {
+            (other, self)
+        };
+
+        for i in 0..left.digits.len() {
+            let (result, carry1) =
+                left.digits[i].overflowing_add(*right.digits.get(i).unwrap_or(&0));
             let (result, carry2) = result.overflowing_add(if carry { 1 } else { 0 });
 
             carry = carry1 || carry2;
@@ -56,6 +70,7 @@ impl BigInt {
         } else {
             Sign::Negative
         };
+
         let (left, right) = if sign == Sign::Positive {
             (self, other)
         } else {
@@ -77,6 +92,29 @@ impl BigInt {
             digits: result_digits,
         }
     }
+
+    fn mul_positive(&self, other: &BigInt) -> BigInt {
+        let mut result = BigInt::new();
+        let mut last_carry = 0;
+
+        for (i, &left_digit) in self.digits.iter().enumerate() {
+            for (j, &right_digit) in other.digits.iter().enumerate() {
+                let result128 = left_digit as u128 * right_digit as u128;
+                let result_lower = result128 as u64;
+                let carry = (result128 >> 64) as u64;
+
+                result += (BigInt::from(result_lower) + BigInt::from(last_carry)) << (i + j);
+
+                last_carry = carry;
+            }
+        }
+
+        if last_carry > 0 {
+            result.digits.push(last_carry);
+        }
+
+        result
+    }
 }
 
 impl Add for BigInt {
@@ -90,6 +128,12 @@ impl Add for BigInt {
             (Sign::Negative, Sign::Positive) => other.sub_positive(&(-self)),
             (Sign::Negative, Sign::Negative) => -((-self).add_positive(&(-other))),
         }
+    }
+}
+
+impl AddAssign for BigInt {
+    fn add_assign(&mut self, other: Self) {
+        *self = self.clone() + other;
     }
 }
 
@@ -107,6 +151,19 @@ impl Sub for BigInt {
     }
 }
 
+impl Mul for BigInt {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        match (self.sign, other.sign) {
+            (Sign::Positive, Sign::Positive) => self.mul_positive(&other),
+            (Sign::Positive, Sign::Negative) => -(self.mul_positive(&(-other))),
+            (Sign::Negative, Sign::Positive) => -((-self).mul_positive(&other)),
+            (Sign::Negative, Sign::Negative) => (-self).mul_positive(&(-other)),
+        }
+    }
+}
+
 impl Neg for BigInt {
     type Output = Self;
 
@@ -120,6 +177,22 @@ impl Neg for BigInt {
                 sign: Sign::Positive,
                 digits: self.digits,
             },
+        }
+    }
+}
+
+/// Since `BigInt` is just a collection of base 2^64 digits, we can extend the left shift operation
+/// to it. Just like a regular binary left shift, it shifts in 0's from the left (the LSD side).
+impl Shl<usize> for BigInt {
+    type Output = Self;
+
+    fn shl(self, rhs: usize) -> Self {
+        let mut new_digits = [0].repeat(rhs);
+        new_digits.extend(self.digits);
+
+        BigInt {
+            sign: self.sign,
+            digits: new_digits,
         }
     }
 }
@@ -193,19 +266,6 @@ impl PartialOrd for BigInt {
     }
 }
 
-impl From<i64> for BigInt {
-    fn from(n: i64) -> Self {
-        BigInt {
-            sign: if n >= 0 {
-                Sign::Positive
-            } else {
-                Sign::Negative
-            },
-            digits: vec![n.unsigned_abs()],
-        }
-    }
-}
-
 /*
 impl Div for BigInt {
     type Output = Self;
@@ -225,6 +285,34 @@ impl Display for BigInt {
     }
 }
 */
+
+impl From<i32> for BigInt {
+    fn from(n: i32) -> Self {
+        BigInt::from(n as i64)
+    }
+}
+
+impl From<i64> for BigInt {
+    fn from(n: i64) -> Self {
+        BigInt {
+            sign: if n >= 0 {
+                Sign::Positive
+            } else {
+                Sign::Negative
+            },
+            digits: vec![n.unsigned_abs()],
+        }
+    }
+}
+
+impl From<u64> for BigInt {
+    fn from(n: u64) -> Self {
+        BigInt {
+            sign: Sign::Positive,
+            digits: vec![n],
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -313,6 +401,37 @@ mod tests {
     }
 
     #[test]
+    fn addition_different_digits_len() {
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![0]
+            } + BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 2]
+            },
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 2]
+            }
+        );
+
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![1]
+            } + BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 2]
+            },
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![2, 2]
+            }
+        );
+    }
+
+    #[test]
     fn subtraction_simple() {
         // (+) - (+) = (+)
         assert_eq!(BigInt::from(5) - BigInt::from(2), BigInt::from(3));
@@ -352,6 +471,97 @@ mod tests {
 
         // (-) - (-) = (+)
         assert_eq!(BigInt::from(-5) - BigInt::from(-69), BigInt::from(64));
+    }
+
+    #[test]
+    fn multiplication() {
+        /* assert_eq!(BigInt::from(5) * BigInt::from(2), BigInt::from(10));
+
+        assert_eq!(
+            BigInt::from(u64::MAX) * BigInt::from(u64::MAX),
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, u64::MAX - 1]
+            }
+        ); */
+
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![0, 5]
+            } * BigInt {
+                sign: Sign::Positive,
+                digits: vec![0, 3]
+            },
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![0, 0, 15]
+            }
+        );
+
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 5]
+            } * BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 3]
+            },
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 8, 15]
+            }
+        );
+
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![69, 78, 420]
+            } * BigInt {
+                sign: Sign::Positive,
+                digits: vec![420, 69, 78]
+            },
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![28980, 37521, 187164, 35064, 32760]
+            }
+        );
+
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![69, 78, 420]
+            } * BigInt {
+                sign: Sign::Positive,
+                digits: vec![2]
+            },
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![138, 156, 840]
+            }
+        );
+    }
+
+    #[test]
+    fn shl() {
+        assert_eq!(
+            BigInt::from(1) << 1,
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![0, 1]
+            }
+        );
+
+        assert_eq!(
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![1, 2]
+            } << 5,
+            BigInt {
+                sign: Sign::Positive,
+                digits: vec![0, 0, 0, 0, 0, 1, 2]
+            }
+        );
     }
 
     #[test]
